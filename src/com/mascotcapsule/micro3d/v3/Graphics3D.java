@@ -1034,7 +1034,9 @@ public class Graphics3D {
 		if (!MascotME.horizontalFovFix) {
 			projScaleX = (int) (fbWidth * scale);
 		} else {
-			projScaleX = (int) (fbWidth * scale / 320 * 240 / fbWidth * fbHeight);
+			int tmpHeight = fbHeight;
+			if (MascotME.halfResRender) tmpHeight *= 2;
+			projScaleX = (int) (fbWidth * scale / 320 * 240 / fbWidth * tmpHeight);
 		}
 		
 		projScaleY = projScaleX;
