@@ -99,6 +99,8 @@ public class MascotME {
 				showTimeMetrics = Integer.parseInt(value) == 1;
 			} else if (key.equals("showHeapUsage")) {
 				showHeapUsage = Integer.parseInt(value) == 1;
+			} else if (key.equals("horizontalFovFix")) {
+				horizontalFovFix = Integer.parseInt(value) == 1;
 			} else if (key.equals("fbClearColor")) {
 				fbClearColor = Integer.parseInt(value, 16);
 			} else if (key.equals("fbSizeWorkaround")) {
