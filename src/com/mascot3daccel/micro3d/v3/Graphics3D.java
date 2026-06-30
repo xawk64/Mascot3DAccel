@@ -6,8 +6,12 @@
 package com.mascot3daccel.micro3d.v3;
 
 import javax.microedition.lcdui.Graphics;
+import javax.microedition.m3g.Appearance;
 import javax.microedition.m3g.Background;
 import javax.microedition.m3g.Camera;
+import javax.microedition.m3g.CompositingMode;
+import javax.microedition.m3g.Material;
+import javax.microedition.m3g.PolygonMode;
 import javax.microedition.m3g.Transform;
 
 public class Graphics3D {
@@ -71,6 +75,10 @@ public class Graphics3D {
 	private final Transform viewTransform;
 	private final Transform cameraToWorld;
 	private final float[] matrixBuf;
+	private final Appearance m3gAppearance;
+	private final PolygonMode polygonMode;
+	private final Material material;
+	private final CompositingMode compositingMode;
 
 	private Graphics boundGraphics;
 	private int viewportWidth;
@@ -86,6 +94,13 @@ public class Graphics3D {
 		viewTransform = new Transform();
 		cameraToWorld = new Transform();
 		matrixBuf = new float[16];
+		m3gAppearance = new Appearance();
+		polygonMode = new PolygonMode();
+		material = new Material();
+		compositingMode = new CompositingMode();
+		m3gAppearance.setPolygonMode(polygonMode);
+		m3gAppearance.setMaterial(material);
+		m3gAppearance.setCompositingMode(compositingMode);
 	}
 
 	public final void dispose() {
@@ -265,6 +280,67 @@ public class Graphics3D {
 		m3g.setCamera(camera, cameraToWorld);
 	}
 
+	private Appearance getM3GAppearance(Texture tex, Effect3D effect) {
+		if (effect == null) throw new NullPointerException();
+
+		float s = Util3D.FIXED_POINT_SCALE;
+
+		polygonMode.setPerspectiveCorrectionEnable(true);
+		polygonMode.setCulling(PolygonMode.CULL_BACK);
+		polygonMode.setWinding(PolygonMode.WINDING_CCW);
+
+		boolean lighting = effect.getLight() != null && !Mascot3DAccel.noLighting;
+		polygonMode.setLightingEnable(lighting);
+
+		compositingMode.setDepthTestEnable(true);
+		compositingMode.setDepthWriteEnable(true);
+		compositingMode.setColorWriteEnable(true);
+		compositingMode.setAlphaWriteEnable(false);
+
+		if (effect.isTransparency() && !Mascot3DAccel.noBlending) {
+			compositingMode.setBlending(CompositingMode.ALPHA);
+		} else {
+			compositingMode.setBlending(CompositingMode.REPLACE);
+		}
+
+		if (tex != null && tex.firstColorIsBlack) {
+			compositingMode.setAlphaThreshold(1.0f / 255.0f);
+		} else {
+			compositingMode.setAlphaThreshold(0.0f);
+		}
+
+		if (tex != null) {
+			m3gAppearance.setTexture(0, tex.getM3GTexture());
+		} else {
+			m3gAppearance.setTexture(0, null);
+		}
+
+		if (lighting) {
+			Light mcLight = effect.getLight();
+			float amb = mcLight.getAmbIntensity() / s;
+			float dir = mcLight.getDirIntensity() / s;
+			if (amb < 0.0f) amb = 0.0f;
+			if (dir < 0.0f) dir = 0.0f;
+			material.setColor(Material.AMBIENT, amb, amb, amb);
+			material.setColor(Material.DIFFUSE, dir, dir, dir);
+			material.setColor(Material.SPECULAR, 0.0f, 0.0f, 0.0f);
+			material.setColor(Material.EMISSIVE, 0.0f, 0.0f, 0.0f);
+		} else {
+			material.setColor(Material.AMBIENT, 1.0f, 1.0f, 1.0f);
+			material.setColor(Material.DIFFUSE, 1.0f, 1.0f, 1.0f);
+			material.setColor(Material.SPECULAR, 0.0f, 0.0f, 0.0f);
+			material.setColor(Material.EMISSIVE, 0.0f, 0.0f, 0.0f);
+		}
+
+		if (effect.getShadingType() == Effect3D.TOON_SHADING) {
+			material.setShininess(0.0f);
+		} else {
+			material.setShininess(1.0f);
+		}
+
+		return m3gAppearance;
+	}
+
 	public final void release(Graphics graphics) {
 		if (disposed) return;
 		if (graphics == null) throw new NullPointerException();
@@ -304,8 +380,7 @@ public class Graphics3D {
 		// TODO: convert fixed-point vertices (divide by Util3D.FIXED_POINT_SCALE) into float[]
 		// TODO: build VertexBuffer / IndexBuffer from figure.polyT3, polyT4, polyC3, polyC4
 		// TODO: apply bone transforms via AffineTrans -> javax.microedition.m3g.Transform
-		// TODO: set Appearance (Material, PolygonMode, Texture2D from Texture.getM3GTexture())
-		// TODO: m3g.render(vertexBuffer, indexBuffer, appearance, transform)
+		// TODO: m3g.render(vertexBuffer, indexBuffer, getM3GAppearance(figure.getTexture(), effect), transform)
 	}
 
 	public final void renderPrimitives(
