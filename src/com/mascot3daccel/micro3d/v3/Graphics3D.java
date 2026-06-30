@@ -75,6 +75,8 @@ public class Graphics3D {
 	private Graphics boundGraphics;
 	private int viewportWidth;
 	private int viewportHeight;
+	private int drawCenterX;
+	private int drawCenterY;
 	private boolean disposed;
 
 	public Graphics3D() {
@@ -150,6 +152,119 @@ public class Graphics3D {
 		m3gTrans.set(m);
 	}
 
+	private void setDrawCenter(FigureLayout layout, int x, int y) {
+		if (layout != null) {
+			drawCenterX = layout.centerX + x;
+			drawCenterY = layout.centerY + y;
+		} else {
+			drawCenterX = x;
+			drawCenterY = y;
+		}
+		if (Mascot3DAccel.halfResRender) {
+			drawCenterY /= 2;
+		}
+	}
+
+	private void updateM3GCamera(FigureLayout layout) {
+		if (layout == null) throw new NullPointerException();
+
+		float s = Util3D.FIXED_POINT_SCALE;
+		float aspect = viewportHeight > 0
+				? (float) viewportWidth / (float) viewportHeight
+				: 1.0f;
+		if (aspect <= 0.0f) aspect = 1.0f;
+
+		int projection = layout.projectionMode;
+		float nearF = layout.near / s;
+		float farF = layout.far / s;
+
+		if (projection == COMMAND_PERSPECTIVE_FOV) {
+			if (nearF >= farF || nearF <= 0.0f) {
+				nearF = 1.0f / s;
+				farF = 32767.0f / s;
+			}
+
+			float fovRad;
+			if (Mascot3DAccel.horizontalFovFix) {
+				float fovHRad = layout.angle / s * (float) Math.PI;
+				fovRad = (float) (2.0 * Math.atan(Math.tan(fovHRad * 0.5) / aspect));
+			} else {
+				fovRad = layout.angle / s * (float) Math.PI;
+			}
+			float fovyDeg = fovRad * 180.0f / (float) Math.PI;
+			camera.setPerspective(fovyDeg, aspect, nearF, farF);
+		} else if (projection == COMMAND_PERSPECTIVE_WH) {
+			if (nearF >= farF || nearF <= 0.0f) {
+				nearF = 1.0f / s;
+				farF = 32767.0f / s;
+			}
+
+			float viewH = layout.perspectiveHeight / s;
+			float viewW = layout.perspectiveWidth / s;
+			if (viewH <= 0.0f || viewW <= 0.0f) {
+				camera.setPerspective(45.0f, aspect, nearF, farF);
+			} else {
+				float fovRad = (float) (2.0 * Math.atan(viewH / (2.0 * nearF)));
+				float fovyDeg = fovRad * 180.0f / (float) Math.PI;
+				camera.setPerspective(fovyDeg, viewW / viewH, nearF, farF);
+			}
+		} else if (projection == COMMAND_PARALLEL_SIZE) {
+			float viewH = layout.parallelHeight / s;
+			float viewW = layout.parallelWidth / s;
+			if (viewH <= 0.0f) viewH = 1.0f;
+			if (viewW <= 0.0f) viewW = viewH * aspect;
+			if (nearF <= 0.0f || farF <= nearF) {
+				nearF = 1.0f / s;
+				farF = 32767.0f / s;
+			}
+			camera.setParallel(viewH, viewW / viewH, nearF, farF);
+		} else {
+			float scaleX = layout.scaleX;
+			float scaleY = layout.scaleY;
+			if (Mascot3DAccel.halfResRender) scaleY /= 2;
+			if (scaleX <= 0) scaleX = 512;
+			if (scaleY <= 0) scaleY = 512;
+
+			float viewH = viewportHeight * s / scaleY;
+			float viewW = viewportWidth * s / scaleX;
+			if (nearF <= 0.0f || farF <= nearF) {
+				nearF = 1.0f / s;
+				farF = 32767.0f / s;
+			}
+			camera.setParallel(viewH / s, viewW / viewH, nearF, farF);
+		}
+
+		AffineTrans view = layout.getAffineTrans();
+		m3gTransformFromMC(view, viewTransform);
+		cameraToWorld.set(viewTransform);
+		cameraToWorld.invert();
+
+		float cxOff = drawCenterX - viewportWidth * 0.5f;
+		float cyOff = drawCenterY - viewportHeight * 0.5f;
+		if (cxOff != 0.0f || cyOff != 0.0f) {
+			float pixToWorldX;
+			float pixToWorldY;
+			if (projection == COMMAND_PARALLEL_SCALE || projection == COMMAND_PARALLEL_SIZE) {
+				float scaleX = layout.scaleX;
+				float scaleY = layout.scaleY;
+				if (Mascot3DAccel.halfResRender) scaleY /= 2;
+				if (scaleX <= 0) scaleX = 512;
+				if (scaleY <= 0) scaleY = 512;
+				pixToWorldX = s / scaleX;
+				pixToWorldY = s / scaleY;
+			} else {
+				float fovRad = layout.angle / s * (float) Math.PI;
+				float tanHalf = (float) Math.tan(fovRad * 0.5);
+				if (tanHalf < 0.0001f) tanHalf = 0.0001f;
+				pixToWorldY = nearF * 2.0f * tanHalf / viewportHeight;
+				pixToWorldX = pixToWorldY;
+			}
+			cameraToWorld.postTranslate(-cxOff * pixToWorldX, cyOff * pixToWorldY, 0.0f);
+		}
+
+		m3g.setCamera(camera, cameraToWorld);
+	}
+
 	public final void release(Graphics graphics) {
 		if (disposed) return;
 		if (graphics == null) throw new NullPointerException();
@@ -183,10 +298,12 @@ public class Graphics3D {
 			throw new NullPointerException();
 		}
 
+		setDrawCenter(layout, x, y);
+		updateM3GCamera(layout);
+
 		// TODO: convert fixed-point vertices (divide by Util3D.FIXED_POINT_SCALE) into float[]
 		// TODO: build VertexBuffer / IndexBuffer from figure.polyT3, polyT4, polyC3, polyC4
 		// TODO: apply bone transforms via AffineTrans -> javax.microedition.m3g.Transform
-		// TODO: configure Camera from FigureLayout projection (parallel / perspective FOV)
 		// TODO: set Appearance (Material, PolygonMode, Texture2D from Texture.getM3GTexture())
 		// TODO: m3g.render(vertexBuffer, indexBuffer, appearance, transform)
 	}
@@ -214,6 +331,9 @@ public class Graphics3D {
 		}
 		if (boundGraphics == null) throw new IllegalStateException();
 
+		setDrawCenter(layout, x, y);
+		updateM3GCamera(layout);
+
 		// TODO: translate PRIMITVE_POINTS/LINES/TRIANGLES/QUADS/POINT_SPRITES into M3G draw calls
 		// TODO: convert vertexCoords from fixed-point (>> 12) to float for VertexBuffer
 	}
@@ -237,6 +357,9 @@ public class Graphics3D {
 		if (textures == null || layout == null || effect == null || commandList == null) {
 			throw new NullPointerException();
 		}
+
+		setDrawCenter(layout, x, y);
+		updateM3GCamera(layout);
 
 		// TODO: interpret MascotCapsule command list opcodes and dispatch to renderPrimitives / renderFigure
 	}
