@@ -290,7 +290,6 @@ public class Graphics3D {
 		polygonMode.setWinding(PolygonMode.WINDING_CCW);
 
 		boolean lighting = effect.getLight() != null && !Mascot3DAccel.noLighting;
-		polygonMode.setLightingEnable(lighting);
 
 		compositingMode.setDepthTestEnable(true);
 		compositingMode.setDepthWriteEnable(true);
@@ -321,15 +320,15 @@ public class Graphics3D {
 			float dir = mcLight.getDirIntensity() / s;
 			if (amb < 0.0f) amb = 0.0f;
 			if (dir < 0.0f) dir = 0.0f;
-			material.setColor(Material.AMBIENT, amb, amb, amb);
-			material.setColor(Material.DIFFUSE, dir, dir, dir);
-			material.setColor(Material.SPECULAR, 0.0f, 0.0f, 0.0f);
-			material.setColor(Material.EMISSIVE, 0.0f, 0.0f, 0.0f);
+			int ambRgb = rgbFromFloat(amb, amb, amb);
+			int dirRgb = rgbFromFloat(dir, dir, dir);
+			material.setColor(Material.AMBIENT, ambRgb);
+			material.setColor(Material.DIFFUSE, dirRgb);
+			material.setColor(Material.SPECULAR, 0x000000);
+			material.setColor(Material.EMISSIVE, 0x000000);
+			m3gAppearance.setMaterial(material);
 		} else {
-			material.setColor(Material.AMBIENT, 1.0f, 1.0f, 1.0f);
-			material.setColor(Material.DIFFUSE, 1.0f, 1.0f, 1.0f);
-			material.setColor(Material.SPECULAR, 0.0f, 0.0f, 0.0f);
-			material.setColor(Material.EMISSIVE, 0.0f, 0.0f, 0.0f);
+			m3gAppearance.setMaterial(null);
 		}
 
 		if (effect.getShadingType() == Effect3D.TOON_SHADING) {
@@ -339,6 +338,13 @@ public class Graphics3D {
 		}
 
 		return m3gAppearance;
+	}
+
+	private static int rgbFromFloat(float r, float g, float b) {
+		int ri = (int) (r * 255.0f);
+		int gi = (int) (g * 255.0f);
+		int bi = (int) (b * 255.0f);
+		return (ri << 16) | (gi << 8) | bi;
 	}
 
 	public final void release(Graphics graphics) {

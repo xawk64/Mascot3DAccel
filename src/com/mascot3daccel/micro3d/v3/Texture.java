@@ -256,8 +256,17 @@ public class Texture {
 			}
 		}
 
-		m3gImage = new Image2D(w, h, Image2D.RGB, rgb);
-		m3gTexture = new Texture2D(0, m3gImage);
+		byte[] rgbBytes = new byte[w * h * 3];
+		for (int i = 0; i < rgb.length; i++) {
+			int c = rgb[i];
+			int base = i * 3;
+			rgbBytes[base] = (byte) ((c >> 16) & 0xff);
+			rgbBytes[base + 1] = (byte) ((c >> 8) & 0xff);
+			rgbBytes[base + 2] = (byte) (c & 0xff);
+		}
+
+		m3gImage = new Image2D(w, h, Image2D.RGB, rgbBytes);
+		m3gTexture = new Texture2D(m3gImage);
 		m3gTexture.setFiltering(Texture2D.FILTER_LINEAR, Texture2D.FILTER_LINEAR);
 	}
 
