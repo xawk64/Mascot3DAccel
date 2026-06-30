@@ -6,149 +6,149 @@ Software rasterizer → **javax.microedition.m3g** Immediate Mode. MBAC/BMP pars
 
 ---
 
-## Для пользователей (релиз)
+## For end users (release)
 
-Нужен только патчер и файл игры. **Java и Python не обязательны**, если вы скачали готовый релиз.
+You only need the patcher and a game JAR. **Java and Python are not required** if you download a prebuilt release.
 
-### Что в релизном архиве
+### Release bundle layout
 
 ```
 Mascot3DAccel-Patcher/
-  mascot3daccel-patcher.exe   (или jar_patcher.py + mascot3daccel.jar)
-  mascot3daccel.jar             предсобранный мост (JSR-184)
+  mascot3daccel-patcher.exe   (or jar_patcher.py + mascot3daccel.jar)
+  mascot3daccel.jar             prebuilt bridge (JSR-184)
   README.txt
 ```
 
-`mascot3daccel.jar` лежит в папке `tools/` репозитория — это тот же мост, который патчер вшивает в игру.
+`mascot3daccel.jar` lives in `tools/` in this repository — the same bridge the patcher injects into games.
 
-### Патч игры в один шаг
+### Patch a game in one step
 
-**Вариант A — готовый .exe (PyInstaller, без Python):**
+**Option A — standalone .exe (PyInstaller, no Python):**
 
 ```text
 mascot3daccel-patcher.exe "RallyMasterPro.jar"
 ```
 
-**Вариант B — Python 3 (только stdlib):**
+**Option B — Python 3 (stdlib only):**
 
 ```bash
 python tools/jar_patcher.py "RallyMasterPro.jar"
 ```
 
-Скрипт в **релизном режиме** (по умолчанию, если рядом нет папки `src/`):
+In **release mode** (default when there is no `src/` folder next to the script):
 
-1. Распаковывает игру.
-2. Заменяет в `.class` байткод `com/mascotcapsule` → `com/mascot3daccel` (13 символов, безопасно для constant pool).
-3. Удаляет старый `com/mascotcapsule/`.
-4. Вкладывает содержимое `tools/mascot3daccel.jar`.
-5. Собирает `RallyMasterPro_patched_nokia.jar`.
+1. Unpacks the game JAR.
+2. Binary-replaces `com/mascotcapsule` → `com/mascot3daccel` in `.class` files (13 characters, safe for the constant pool).
+3. Removes the old `com/mascotcapsule/` tree.
+4. Injects `tools/mascot3daccel.jar`.
+5. Writes `RallyMasterPro_patched_nokia.jar`.
 
-Скопируйте JAR (и `.jad`, если есть) на телефон.
+Copy the patched JAR (and `.jad` if present) to the phone.
 
-### Сборка .exe для распространения (maintainer)
+### Building the .exe for distribution (maintainers)
 
 ```bash
 pip install pyinstaller
 pyinstaller --onefile --name mascot3daccel-patcher tools/jar_patcher.py
 ```
 
-Положите рядом с `.exe` файл `mascot3daccel.jar` (в ту же папку, что и скрипт — `tools/` в репозитории).
+Place `mascot3daccel.jar` next to the `.exe` (same folder as the script — `tools/` in the repo).
 
 ---
 
-## Для разработчиков (Dev-режим)
+## For developers (dev mode)
 
-### Требования
+### Requirements
 
-| Компонент | Назначение |
-|-----------|------------|
-| **OpenJDK 8** ([Adoptium Temurin](https://adoptium.net/)) | `javac` для байткода Java 1.3 |
-| **`lib/jsr184_api.jar`** | API JSR-184 / MIDP для Dev-компиляции (см. ниже) |
-| Python 3 | Запуск `tools/jar_patcher.py` |
+| Component | Purpose |
+|-----------|---------|
+| **OpenJDK 8** ([Adoptium Temurin](https://adoptium.net/)) | `javac` for Java 1.3 bytecode |
+| **`lib/jsr184_api.jar`** | JSR-184 / MIDP API stubs for dev compilation (see below) |
+| Python 3 | Running `tools/jar_patcher.py` |
 
-### JSR-184 API для Dev-компиляции
+### JSR-184 API for dev compilation
 
-Стандартный `javac` не знает пакеты `javax.microedition.m3g` и `javax.microedition.lcdui`. Для Dev-режима нужен JAR с мобильным API:
+Stock `javac` does not know `javax.microedition.m3g` or `javax.microedition.lcdui`. For dev mode you need a J2ME API stub JAR:
 
-1. Возьмите **`api.jar`** из папки **KEmulator** (полный J2ME API stub с MIDP и M3G).
-2. Скопируйте его в репозиторий как:
+1. Copy **`api.jar`** from **KEmulator** (full J2ME API stub with MIDP and M3G).
+2. Save it in the repo as:
 
 ```text
 lib/jsr184_api.jar
 ```
 
-Если в `api.jar` нет `javax.microedition.lcdui`, дополнительно положите MIDP-stub как `lib/midp_api.jar`.
+If your `api.jar` lacks `javax.microedition.lcdui`, also add a MIDP stub as `lib/midp_api.jar`.
 
-Файлы не коммитятся в git (см. `.gitignore`), каждый разработчик кладёт их локально.
+These files are not committed (see `.gitignore`); each developer keeps them locally.
 
-Патчер автоматически дополняет `-bootclasspath` JAR-ом `rt.jar` из JDK 8 (иначе `java.lang` не резолвится).
+The patcher automatically prepends JDK 8 `rt.jar` to `-bootclasspath` (required because `-bootclasspath` replaces the default bootstrap classes).
 
-Альтернатива: переменная окружения `MASCOT3DACCEL_BOOTCLASSPATH` с полным списком JAR из Java ME SDK 3.x.
+Override: set `MASCOT3DACCEL_BOOTCLASSPATH` to a full JAR list from Java ME SDK 3.x.
 
-### Настройка окружения
+### Environment setup
 
-1. Установите **JDK 8**, проверьте: `javac -version`
-2. Добавьте в `PATH` или задайте `JAVA_HOME`
-3. Положите `lib/jsr184_api.jar` (см. выше)
+1. Install **JDK 8** and verify: `javac -version`
+2. Add it to `PATH` or set `JAVA_HOME`
+3. Place `lib/jsr184_api.jar` (see above)
 
-Альтернатива без патчера: сборка через **NetBeans** + JSR-184 platform (`ant jar`).
+Alternative without the patcher: build with **NetBeans** + JSR-184 platform (`ant jar`).
 
-### Dev-режим патчера
+### Patcher dev mode
 
-Активируется флагом `--dev` или **автоматически**, если в корне репозитория есть `src/`:
+Enabled with `--dev`, or **automatically** when `src/` exists at the repo root:
 
 ```bash
 python tools/jar_patcher.py --dev "game.jar" -o game_n95.jar
 ```
 
-Патчер вызывает:
+The patcher runs:
 
 ```text
 javac -source 1.3 -target 1.3 -bootclasspath lib/jsr184_api.jar -d build/classes src/com/mascot3daccel/micro3d/v3/*.java
 ```
 
-Затем вшивает `build/classes` в игру (с той же бинарной заменой `mascotcapsule` → `mascot3daccel`).
+Then injects `build/classes` into the game (same binary `mascotcapsule` → `mascot3daccel` replacement).
 
-Принудительный релизный режим (даже при наличии `src/`):
+Force release mode even when `src/` is present:
 
 ```bash
 python tools/jar_patcher.py --release "game.jar"
 ```
 
-Готовые классы без javac:
+Use prebuilt classes without javac:
 
 ```bash
 python tools/jar_patcher.py --dev game.jar --classes-dir build/CLDC-1.1-MIDP-2.0/compiled
 ```
 
-### Структура репозитория
+### Repository layout
 
 ```
-src/com/mascot3daccel/micro3d/v3/   исходники MCv3 + M3G
-lib/jsr184_api.jar                  JSR-184 API (KEmulator api.jar, локально)
-tools/jar_patcher.py                гибридный патчер
-tools/mascot3daccel.jar             релизный мост (собирается maintainer'ом)
-build/classes/                      выход javac (dev)
+src/com/mascot3daccel/micro3d/v3/   MCv3 + M3G sources
+lib/jsr184_api.jar                  JSR-184 API (KEmulator api.jar, local only)
+tools/jar_patcher.py                hybrid patcher
+tools/mascot3daccel.jar             release bridge (built by maintainers)
+build/classes/                      javac output (dev)
 dist/                               Mascot3DAccel.jar (NetBeans)
 ```
 
-### Статус разработки
+### Development status
 
-| Компонент | Состояние |
-|-----------|-----------|
-| MBAC / BMP parsing | Готово |
-| M3G bind / release / textures | Готово |
-| Матрицы и камера | Готово |
-| Appearance / material | Готово |
-| Figure → VertexBuffer | В работе |
+| Component | Status |
+|-----------|--------|
+| MBAC / BMP parsing | Done |
+| M3G bind / release / textures | Done |
+| Matrices and camera | Done |
+| Appearance / material | Done |
+| Figure → VertexBuffer | In progress |
 
-### Конфигурация в игре
+### In-game configuration
 
-`mascotme.ini` в корне JAR — см. [INI-CONFIG.md](INI-CONFIG.md).
+`mascotme.ini` at the JAR root — see [INI-CONFIG.md](INI-CONFIG.md).
 
 ---
 
-## Screenshots (MascotME, софтверный рендер)
+## Screenshots (MascotME, software renderer)
 
 ![Screenshot of a Coast Racer](/screenshots/CoastRacer.png) ![Screenshot of a Bomberman 3D](/screenshots/Bomberman3D.png) ![Screenshot of a Blades and Magic](/screenshots/BladesAndMagic.png)
 
