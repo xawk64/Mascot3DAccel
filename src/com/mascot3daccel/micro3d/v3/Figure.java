@@ -2,11 +2,12 @@
  * MIT License
  * Copyright (c) 2026 Yury Kharchenko
  * Copyright (c) 2026 Roman Lahin
+ * Copyright (c) 2026 Konstantin Zverev. All rights reserved.
  */
 
-package com.mascotcapsule.micro3d.v3;
+package com.mascot3daccel.micro3d.v3;
 
-import com.mascotcapsule.micro3d.v3.ActionTable.Action;
+import com.mascot3daccel.micro3d.v3.ActionTable.Action;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;

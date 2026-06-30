@@ -1,9 +1,10 @@
 /*
  * MIT License
  * Copyright (c) 2026 Roman Lahin
+ * Copyright (c) 2026 Konstantin Zverev. All rights reserved.
  */
 
-package com.mascotcapsule.micro3d.v3;
+package com.mascot3daccel.micro3d.v3;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Graphics;

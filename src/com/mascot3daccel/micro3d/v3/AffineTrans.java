@@ -1,9 +1,10 @@
 /*
  * MIT License
  * Copyright (c) 2026 Yury Kharchenko
+ * Copyright (c) 2026 Konstantin Zverev. All rights reserved.
  */
 
-package com.mascotcapsule.micro3d.v3;
+package com.mascot3daccel.micro3d.v3;
 
 public class AffineTrans {
 	private static final Vector3D tmp = new Vector3D();

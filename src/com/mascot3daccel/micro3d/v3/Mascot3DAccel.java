@@ -1,16 +1,17 @@
 /*
  * MIT License
  * Copyright (c) 2026 Roman Lahin
+ * Copyright (c) 2026 Konstantin Zverev. All rights reserved.
  */
 
-package com.mascotcapsule.micro3d.v3;
+package com.mascot3daccel.micro3d.v3;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class MascotME {
-	static String version = "MascotME 1.1.1";
+public class Mascot3DAccel {
+	static String version = "Mascot3DAccel 1.1.1";
 	
 	// Debug options:
 	
@@ -139,7 +140,7 @@ public class MascotME {
 		InputStream is = null;
 		
 		try {
-			is = (new Object()).getClass().getResourceAsStream("/mascotme.ini");
+			is = (new Object()).getClass().getResourceAsStream("/Mascot3DAccel.ini");
 			if (is == null) return;
 			
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();

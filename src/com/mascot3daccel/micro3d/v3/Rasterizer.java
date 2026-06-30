@@ -1,9 +1,12 @@
-//MIT License
-//Copyright (c) 2026 Roman Lahin
-//WARNING!!! 
-//THIS CODE WAS GENERATED AUTOMATICALLY
-//SEE codegen DIRECTORY
-package com.mascotcapsule.micro3d.v3;
+/*
+ * MIT License
+ * Copyright (c) 2026 Roman Lahin
+ * Copyright (c) 2026 Konstantin Zverev. All rights reserved.
+ * WARNING!!!
+ * THIS CODE WAS GENERATED AUTOMATICALLY
+ * SEE codegen DIRECTORY
+ */
+package com.mascot3daccel.micro3d.v3;
 
 public class Rasterizer {
 

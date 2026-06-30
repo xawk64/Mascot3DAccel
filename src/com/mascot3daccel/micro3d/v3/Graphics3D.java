@@ -1,9 +1,10 @@
 /*
  * MIT License
  * Copyright (c) 2026 Roman Lahin
+ * Copyright (c) 2026 Konstantin Zverev. All rights reserved.
  */
 
-package com.mascotcapsule.micro3d.v3;
+package com.mascot3daccel.micro3d.v3;
 
 import javax.microedition.lcdui.Graphics;
 
@@ -318,7 +319,7 @@ public class Graphics3D {
 		int clipW = graphics.getClipWidth();
 		int clipH = graphics.getClipHeight();
 		
-		if (!MascotME.fbSizeWorkaround) {
+		if (!Mascot3DAccel.fbSizeWorkaround) {
 			fbWidth = Math.max(clipX + clipW, 0);
 			fbHeight = Math.max(clipY + clipH, 0);
 		} else {
@@ -341,20 +342,20 @@ public class Graphics3D {
 			frameBuffer = new int[fbWidth * fbHeight];
 		}
 		
-		if (MascotME.halfResRender) fbHeight /= 2;
+		if (Mascot3DAccel.halfResRender) fbHeight /= 2;
 		
 		setClip(clipX, clipY, clipW, clipH);
 		
 		allowedClippingStages = 
-				(MascotME.noNearClipping ? 0 : NEAR_CLIP) |
-				(MascotME.noFarClipping ? 0 : FAR_CLIP) |
-				(MascotME.noToonSplitting ? 0 : TOON_SPLIT);
+				(Mascot3DAccel.noNearClipping ? 0 : NEAR_CLIP) |
+				(Mascot3DAccel.noFarClipping ? 0 : FAR_CLIP) |
+				(Mascot3DAccel.noToonSplitting ? 0 : TOON_SPLIT);
 		
 		fbDrawCounter = 0;
 		
-		if (!MascotME.doNotClear) {
-			int color = MascotME.fbClearColor;
-			if (color == MascotME.CLEAR_WITH_LAST_USED_COLOR) {
+		if (!Mascot3DAccel.doNotClear) {
+			int color = Mascot3DAccel.fbClearColor;
+			if (color == Mascot3DAccel.CLEAR_WITH_LAST_USED_COLOR) {
 				color = graphics.getColor() & 0xffffff;
 			}
 			
@@ -368,7 +369,7 @@ public class Graphics3D {
 		int[] fb = frameBuffer;
 		final int fbLen = fbWidth * fbHeight;
 		int cleared = fbLen;
-		if (MascotME.useArrayCopyClear) cleared >>= 8;
+		if (Mascot3DAccel.useArrayCopyClear) cleared >>= 8;
 
 		int i = 0;
 		while (cleared - i >= 16) {
@@ -438,9 +439,9 @@ public class Graphics3D {
 	}
 	
 	private final void drawFB(int clipX, int clipY, int clipW, int clipH) {
-		boolean alphaBlending = MascotME.overwrite2D ? (fbDrawCounter > 0) : true;
+		boolean alphaBlending = Mascot3DAccel.overwrite2D ? (fbDrawCounter > 0) : true;
 		
-		if (MascotME.halfResRender) {
+		if (Mascot3DAccel.halfResRender) {
 			int[] fb = frameBuffer;
 			int fbWidth = this.fbWidth, fbHeight = this.fbHeight;
 			
@@ -468,8 +469,8 @@ public class Graphics3D {
 		
 		if (sortPrimCount > 0) {
 			//Clear fb alpha when necessary
-			if (!MascotME.no2DInbetween && fbDrawCounter > 0) {
-				if (!MascotME.halfResRender) {
+			if (!Mascot3DAccel.no2DInbetween && fbDrawCounter > 0) {
+				if (!Mascot3DAccel.halfResRender) {
 					clearFBAlpha(clipX, clipY, clipW, clipH);
 				} else {
 					clearFBAlpha(clipX, clipY / 2, clipW, clipH / 2);
@@ -484,7 +485,7 @@ public class Graphics3D {
 			flushPrimBufferReserved();
 			
 			//Draw fb on screen
-			if (!MascotME.no2DInbetween) {
+			if (!Mascot3DAccel.no2DInbetween) {
 				int prevClipX = boundGraphics.getClipX();
 				int prevClipY = boundGraphics.getClipY();
 				int prevClipW = boundGraphics.getClipWidth();
@@ -519,9 +520,9 @@ public class Graphics3D {
 		if (graphics == null) throw new NullPointerException();
 		if (graphics != boundGraphics) throw new IllegalArgumentException();
 		
-		boolean showSomeStats = MascotME.showFPS | MascotME.showTimeMetrics | MascotME.showHeapUsage;
+		boolean showSomeStats = Mascot3DAccel.showFPS | Mascot3DAccel.showTimeMetrics | Mascot3DAccel.showHeapUsage;
 		
-		if (!MascotME.no2DInbetween && !showSomeStats) {
+		if (!Mascot3DAccel.no2DInbetween && !showSomeStats) {
 			boundGraphics = null;
 			return;
 		}
@@ -532,14 +533,14 @@ public class Graphics3D {
 		int prevClipY = graphics.getClipY();
 		int prevClipW = graphics.getClipWidth();
 		int prevClipH = graphics.getClipHeight();
-		graphics.setClip(0, 0, fbWidth, MascotME.halfResRender ? fbHeight * 2 : fbHeight);
+		graphics.setClip(0, 0, fbWidth, Mascot3DAccel.halfResRender ? fbHeight * 2 : fbHeight);
 				
 		int prevTx = graphics.getTranslateX();
 		int prevTy = graphics.getTranslateY();
 		graphics.translate(-prevTx, -prevTy);
 		
-		if (MascotME.no2DInbetween) {
-			drawFB(0, 0, fbWidth, MascotME.halfResRender ? fbHeight * 2 : fbHeight);
+		if (Mascot3DAccel.no2DInbetween) {
+			drawFB(0, 0, fbWidth, Mascot3DAccel.halfResRender ? fbHeight * 2 : fbHeight);
 		}
 		
 		if (showSomeStats) {
@@ -547,12 +548,12 @@ public class Graphics3D {
 			
 			framesCount++;
 			if (time - prevStatsCheck >= 1000) {
-				if (MascotME.showFPS) {
+				if (Mascot3DAccel.showFPS) {
 					fps = framesCount * 1000 / (int) (time - prevStatsCheck);
 					frameTime = (int) (time - prevStatsCheck) * 10 / framesCount;
 				}
 				
-				if (MascotME.showTimeMetrics) {
+				if (Mascot3DAccel.showTimeMetrics) {
 					bindTime = bindAccum / framesCount;
 					figureTime = figureAccum / framesCount;
 					primCmdTime = primCmdAccum / framesCount;
@@ -563,7 +564,7 @@ public class Graphics3D {
 					primCmdAccum = flushAccum = releaseAccum = 0;
 				}
 				
-				if (MascotME.showHeapUsage) {
+				if (Mascot3DAccel.showHeapUsage) {
 					Runtime runtime = Runtime.getRuntime();
 					heapUsage = (int) ((runtime.totalMemory() - runtime.freeMemory()) >> 10);
 				}
@@ -576,7 +577,7 @@ public class Graphics3D {
 			int fontH = graphics.getFont().getHeight();
 			int drawY = 0;
 			
-			if (MascotME.showTimeMetrics) {
+			if (Mascot3DAccel.showTimeMetrics) {
 				drawStatsText("Bind: " + bindTime, 0, drawY, graphics);
 				drawY += fontH;
 				drawStatsText("Figure: " + figureTime, 0, drawY, graphics);
@@ -589,12 +590,12 @@ public class Graphics3D {
 				drawY += fontH;
 			}
 			
-			if (MascotME.showHeapUsage) {
+			if (Mascot3DAccel.showHeapUsage) {
 				drawStatsText("Heap: " + heapUsage + " kb", 0, drawY, graphics);
 				drawY += fontH;
 			}
 			
-			if (MascotME.showFPS) {
+			if (Mascot3DAccel.showFPS) {
 				drawStatsText("FPS: " + fps + " / " + frameTime, 0, drawY, graphics);
 				drawY += fontH;
 			}
@@ -675,7 +676,7 @@ public class Graphics3D {
 		int clipX1 = clipX, clipY1 = clipY;
 		int clipX2 = clipX1 + clipW, clipY2 = clipY1 + clipH;
 		
-		if (MascotME.halfResRender) {
+		if (Mascot3DAccel.halfResRender) {
 			clipY1 >>= 1;
 			clipY2 >>= 1;
 		}
@@ -732,7 +733,7 @@ public class Graphics3D {
 						break;
 					}
 					case PRIM_TYPE_SPRITE: {
-						if (blendMode != 0 && MascotME.noBlending) continue;
+						if (blendMode != 0 && Mascot3DAccel.noBlending) continue;
 						
 						int angle = header >>> 20;
 						int texId = (header >> 8) & 4095;
@@ -803,7 +804,7 @@ public class Graphics3D {
 			int clipX1, int clipY1, int clipX2, int clipY2
 	) {
 		int blendMode = (header & Figure.MAT_BLEND_MASK) >> 1;
-		if (blendMode != 0 && MascotME.noBlending) return;
+		if (blendMode != 0 && Mascot3DAccel.noBlending) return;
 
 		boolean lighting = (header & Figure.MAT_LIGHTING) != 0;
 		boolean envMapping = lighting && (header & Figure.MAT_SPECULAR) != 0;
@@ -989,7 +990,7 @@ public class Graphics3D {
 			drawCenterY = y;
 		}
 		
-		if (MascotME.halfResRender) drawCenterY /= 2;
+		if (Mascot3DAccel.halfResRender) drawCenterY /= 2;
 	}
 
 	private final void setProjection(FigureLayout layout) {
@@ -1010,7 +1011,7 @@ public class Graphics3D {
 		projectionMode = PROJ_PARALLEL;
 		projScaleX = scaleX;
 		projScaleY = scaleY;
-		if (MascotME.halfResRender) projScaleY /= 2;
+		if (Mascot3DAccel.halfResRender) projScaleY /= 2;
 	}
 	
 	private final void setOrthographicWH(int w, int h) {
@@ -1031,16 +1032,16 @@ public class Graphics3D {
 
 		float scale = 0.5f / (float) Math.tan(angle / 4096.0f * Math.PI);
 		
-		if (!MascotME.horizontalFovFix) {
+		if (!Mascot3DAccel.horizontalFovFix) {
 			projScaleX = (int) (fbWidth * scale);
 		} else {
 			int tmpHeight = fbHeight;
-			if (MascotME.halfResRender) tmpHeight *= 2;
+			if (Mascot3DAccel.halfResRender) tmpHeight *= 2;
 			projScaleX = (int) (fbWidth * scale / 320 * 240 / fbWidth * tmpHeight);
 		}
 		
 		projScaleY = projScaleX;
-		if (MascotME.halfResRender) projScaleY /= 2;
+		if (Mascot3DAccel.halfResRender) projScaleY /= 2;
 	}
 	
 	private final void setPerspectiveWH(int near, int far, int w, int h) {
@@ -1056,7 +1057,7 @@ public class Graphics3D {
 	}
 	
 	private final void setEffect(Effect3D effect) {
-		if (effect.light != null && !MascotME.noLighting) {
+		if (effect.light != null && !Mascot3DAccel.noLighting) {
 			efxLight = g3dLight;
 			efxLight.direction.set(effect.light.direction);
 			efxLight.dirIntensity = effect.light.dirIntensity;
@@ -1068,7 +1069,7 @@ public class Graphics3D {
 		efxToon = effect.shadingType == Effect3D.TOON_SHADING;
 		efxTransparency = effect.transparency;
 		
-		if (!MascotME.noEnvMapping) {
+		if (!Mascot3DAccel.noEnvMapping) {
 			efxSphereTex = g3dSphereTex = effect.sphereTexture;
 		} else {
 			efxSphereTex = g3dSphereTex = null;
@@ -1081,7 +1082,7 @@ public class Graphics3D {
 	
 	private final void setClip(int x, int y, int w, int h) {
 		int fbWidth = this.fbWidth;
-		int fbHeight = MascotME.halfResRender ? this.fbHeight * 2 : this.fbHeight;
+		int fbHeight = Mascot3DAccel.halfResRender ? this.fbHeight * 2 : this.fbHeight;
 		
 		int x2 = x + w, y2 = y + h;
 		
@@ -1603,7 +1604,7 @@ public class Graphics3D {
 					setPerspectiveWH(commandList[idx++], commandList[idx++], commandList[idx++], commandList[idx++]);
 					break;
 				case COMMAND_ATTRIBUTE: {
-					boolean lighting = (cmd & ENV_ATTR_LIGHTING) != 0 && !MascotME.noLighting; 
+					boolean lighting = (cmd & ENV_ATTR_LIGHTING) != 0 && !Mascot3DAccel.noLighting; 
 					efxLight = lighting ? g3dLight : null;
 					efxTransparency = (cmd & ENV_ATTR_SEMI_TRANSPARENT) != 0;
 					efxSphereTex = (cmd & ENV_ATTR_SPHERE_MAP) != 0 ? g3dSphereTex : null;
@@ -2103,7 +2104,7 @@ public class Graphics3D {
 		int scaleX = projScaleX, scaleY = projScaleY;
 		int centerX = drawCenterX, centerY = drawCenterY;
 		int fbWidth = this.fbWidth, fbHeight = this.fbHeight;
-		int pxHScale = MascotME.halfResRender ? 1 : 0;
+		int pxHScale = Mascot3DAccel.halfResRender ? 1 : 0;
 		
 		int projectionMode = this.projectionMode;
 		int perspectiveNear = this.projNear;
