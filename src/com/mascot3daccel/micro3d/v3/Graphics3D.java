@@ -69,6 +69,8 @@ public class Graphics3D {
 	private final Background background;
 	private final Camera camera;
 	private final Transform viewTransform;
+	private final Transform cameraToWorld;
+	private final float[] matrixBuf;
 
 	private Graphics boundGraphics;
 	private int viewportWidth;
@@ -80,6 +82,8 @@ public class Graphics3D {
 		background = new Background();
 		camera = new Camera();
 		viewTransform = new Transform();
+		cameraToWorld = new Transform();
+		matrixBuf = new float[16];
 	}
 
 	public final void dispose() {
@@ -117,6 +121,33 @@ public class Graphics3D {
 		}
 
 		m3g.setViewport(clipX, clipY, clipW, clipH);
+	}
+
+	private void m3gTransformFromMC(AffineTrans mcTrans, Transform m3gTrans) {
+		if (mcTrans == null) throw new NullPointerException();
+		if (m3gTrans == null) throw new NullPointerException();
+
+		float s = Util3D.FIXED_POINT_SCALE;
+		float[] m = matrixBuf;
+
+		m[0] = mcTrans.m00 / s;
+		m[1] = mcTrans.m01 / s;
+		m[2] = mcTrans.m02 / s;
+		m[3] = mcTrans.m03 / s;
+		m[4] = mcTrans.m10 / s;
+		m[5] = mcTrans.m11 / s;
+		m[6] = mcTrans.m12 / s;
+		m[7] = mcTrans.m13 / s;
+		m[8] = mcTrans.m20 / s;
+		m[9] = mcTrans.m21 / s;
+		m[10] = mcTrans.m22 / s;
+		m[11] = mcTrans.m23 / s;
+		m[12] = 0.0f;
+		m[13] = 0.0f;
+		m[14] = 0.0f;
+		m[15] = 1.0f;
+
+		m3gTrans.set(m);
 	}
 
 	public final void release(Graphics graphics) {
