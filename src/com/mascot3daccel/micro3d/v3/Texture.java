@@ -10,7 +10,8 @@ package com.mascot3daccel.micro3d.v3;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-//import javax.microedition.lcdui.Image;
+import javax.microedition.m3g.Image2D;
+import javax.microedition.m3g.Texture2D;
 
 public class Texture {
 	//8-bit indexed color texture data
@@ -28,9 +29,11 @@ public class Texture {
 	
 	//True if this is a model texture, false if for environment mapping
 	boolean isForModel;
-	
-	//Used in Graphics3D polygons list
-	int g3dBindIdx = -1;
+
+	//JSR-184 native texture objects
+	private Image2D m3gImage;
+	private Texture2D m3gTexture;
+	private boolean m3gBuilt;
 
 	public Texture(byte[] b, boolean isForModel) {
 		if (b == null) throw new NullPointerException();
@@ -228,9 +231,43 @@ public class Texture {
 		palette = newPalette;
 	}
 
+	public final Texture2D getM3GTexture() {
+		if (m3gBuilt) return m3gTexture;
+		buildM3GTexture();
+		return m3gTexture;
+	}
+
+	private final void buildM3GTexture() {
+		m3gBuilt = true;
+
+		int w = paddedWidth;
+		int h = paddedHeight;
+		int[] rgb;
+
+		if (isForModel) {
+			rgb = new int[w * h];
+			for (int i = 0; i < bitmapData.length; i++) {
+				rgb[i] = palette[bitmapData[i] & 0xff];
+			}
+		} else {
+			rgb = new int[w * h];
+			for (int i = 0; i < envmapData.length; i++) {
+				rgb[i] = 0xff000000 | envmapData[i];
+			}
+		}
+
+		m3gImage = new Image2D(w, h, Image2D.RGB, rgb);
+		m3gTexture = new Texture2D(0, m3gImage);
+		m3gTexture.setFiltering(Texture2D.FILTER_LINEAR, Texture2D.FILTER_LINEAR);
+	}
+
 	public final void dispose() {
 		bitmapData = null;
 		envmapData = null;
 		palette = null;
+		origPalette = null;
+		m3gImage = null;
+		m3gTexture = null;
+		m3gBuilt = false;
 	}
 }

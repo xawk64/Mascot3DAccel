@@ -8,7 +8,10 @@
 package com.mascot3daccel.micro3d.v3;
 
 public class Util3D {
-	
+
+	/** MascotCapsule fixed-point scale: divide integer coords by this to get M3G floats. */
+	public static final float FIXED_POINT_SCALE = 4096.0f;
+
 	private static final short[] sinTable = new short[4096];
 	
 	static {
