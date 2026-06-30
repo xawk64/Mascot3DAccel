@@ -1,89 +1,148 @@
 # Mascot3DAccel
 
-Mascot3DAccel is a hardware-accelerated fork of [MascotME](https://github.com/woesss/JL-Mod/) for **JSR-184 (M3G)** devices such as the **Nokia N95** (PowerVR MBX Lite). It keeps the MascotCapsule v3 API (`com.mascot3daccel.micro3d.v3`) so existing games can run without recompilation on the phone — the bridge is injected on a PC.
+Hardware-accelerated fork of [MascotME](https://github.com/woesss/JL-Mod/) for **JSR-184 (M3G)** phones — **Nokia N95** (PowerVR MBX Lite). Keeps the MascotCapsule v3 API as `com.mascot3daccel.micro3d.v3`; games are patched on a PC, not recompiled on the device.
 
-The original software rasterizer is replaced with **javax.microedition.m3g** Immediate Mode rendering. Parsing of `.mbac` models, animations, and BMP textures is inherited from MascotME / [JL-Mod](https://github.com/woesss/JL-Mod/).
+Software rasterizer → **javax.microedition.m3g** Immediate Mode. MBAC/BMP parsing inherited from MascotME / [JL-Mod](https://github.com/woesss/JL-Mod/).
 
-## Requirements
+---
 
-| Layer | Requirement |
-|-------|-------------|
-| Phone / target | MIDP 2.0, CLDC 1.1, **JSR-184 1.1** |
-| Dev build | Java ME SDK 3.x or NetBeans with JSR-184 platform |
-| Patching games | **Python 3** (stdlib only) |
+## Для пользователей (релиз)
 
-## Quick start — patch any game (one command)
+Нужен только патчер и файл игры. **Java и Python не обязательны**, если вы скачали готовый релиз.
 
-1. Build this project in NetBeans (**Clean and Build**) or run `ant jar`.
-2. Patch the game JAR:
+### Что в релизном архиве
+
+```
+Mascot3DAccel-Patcher/
+  mascot3daccel-patcher.exe   (или jar_patcher.py + mascot3daccel.jar)
+  mascot3daccel.jar             предсобранный мост (JSR-184)
+  README.txt
+```
+
+`mascot3daccel.jar` лежит в папке `tools/` репозитория — это тот же мост, который патчер вшивает в игру.
+
+### Патч игры в один шаг
+
+**Вариант A — готовый .exe (PyInstaller, без Python):**
+
+```text
+mascot3daccel-patcher.exe "RallyMasterPro.jar"
+```
+
+**Вариант B — Python 3 (только stdlib):**
 
 ```bash
 python tools/jar_patcher.py "RallyMasterPro.jar"
 ```
 
-Output: `RallyMasterPro_patched_nokia.jar` in the current directory.
+Скрипт в **релизном режиме** (по умолчанию, если рядом нет папки `src/`):
 
-Custom output path and explicit classes directory:
+1. Распаковывает игру.
+2. Заменяет в `.class` байткод `com/mascotcapsule` → `com/mascot3daccel` (13 символов, безопасно для constant pool).
+3. Удаляет старый `com/mascotcapsule/`.
+4. Вкладывает содержимое `tools/mascot3daccel.jar`.
+5. Собирает `RallyMasterPro_patched_nokia.jar`.
+
+Скопируйте JAR (и `.jad`, если есть) на телефон.
+
+### Сборка .exe для распространения (maintainer)
 
 ```bash
-python tools/jar_patcher.py game.jar -o game_n95.jar --classes-dir build/CLDC-1.1-MIDP-2.0/compiled
+pip install pyinstaller
+pyinstaller --onefile --name mascot3daccel-patcher tools/jar_patcher.py
 ```
 
-The patcher will:
+Положите рядом с `.exe` файл `mascot3daccel.jar` (в ту же папку, что и скрипт — `tools/` в репозитории).
 
-1. Unpack the game JAR.
-2. Binary-replace `com/mascotcapsule` → `com/mascot3daccel` in every `.class` (same 13-character package name — safe for the constant pool).
-3. Remove the old `com/mascotcapsule` classes from the archive.
-4. Inject compiled `com/mascot3daccel/**` from `build/.../compiled` or `dist/.../Mascot3DAccel.jar`.
-5. Repack a ready-to-install JAR.
+---
 
-Copy the patched JAR (and `.jad` if needed) to the phone and run.
+## Для разработчиков (Dev-режим)
 
-## Manual integration
+### Требования
 
-Copy the `com/mascot3daccel` folder from `dist/.../Mascot3DAccel.jar` into the game JAR and rename package references in game classes (the Python script does this automatically). See [INTEGRATION-NOTES.md](INTEGRATION-NOTES.md) for emulator integration.
+| Компонент | Назначение |
+|-----------|------------|
+| **OpenJDK 8** ([Adoptium Temurin](https://adoptium.net/)) | `javac` для байткода Java 1.3 |
+| **Java ME SDK 3.x** (опционально) | JSR-184 bootclasspath для компиляции M3G |
+| Python 3 | Запуск `tools/jar_patcher.py` |
 
-## Configuration
+### Настройка окружения
 
-Compatibility and debug flags use `mascotme.ini` in the JAR root (same format as MascotME). See [INI-CONFIG.md](INI-CONFIG.md).
+1. Установите **JDK 8**, проверьте: `javac -version`
+2. Добавьте в `PATH` или задайте `JAVA_HOME`
+3. Для M3G-классов укажите bootclasspath (пример Windows):
 
-Example for Nokia N95 testing:
-
-```ini
-showFPS=1
-doNotClear=0
+```text
+set MASCOT3DACCEL_BOOTCLASSPATH=C:\Java_ME_platform_SDK_3.4\lib\jsr184_1.1.jar;C:\Java_ME_platform_SDK_3.4\lib\midp_2.0.jar;C:\Java_ME_platform_SDK_3.4\lib\cldc_1.1.jar
 ```
 
-## Project layout
+Альтернатива: сборка через **NetBeans** + JSR-184 platform (`ant jar`).
+
+### Dev-режим патчера
+
+Активируется флагом `--dev` или **автоматически**, если в корне репозитория есть `src/`:
+
+```bash
+python tools/jar_patcher.py --dev "game.jar" -o game_n95.jar
+```
+
+Патчер вызывает:
+
+```text
+javac -source 1.3 -target 1.3 -encoding UTF-8 -d build/classes src/com/mascot3daccel/micro3d/v3/*.java
+```
+
+Затем вшивает `build/classes` в игру (с той же бинарной заменой `mascotcapsule` → `mascot3daccel`).
+
+Принудительный релизный режим (даже при наличии `src/`):
+
+```bash
+python tools/jar_patcher.py --release "game.jar"
+```
+
+Готовые классы без javac:
+
+```bash
+python tools/jar_patcher.py --dev game.jar --classes-dir build/CLDC-1.1-MIDP-2.0/compiled
+```
+
+### Структура репозитория
 
 ```
-src/com/mascot3daccel/micro3d/v3/   MCv3 API + M3G renderer
-tools/jar_patcher.py                AOT JAR patcher (PC)
-build/                              Compiled .class (after build)
-dist/                               Mascot3DAccel.jar
+src/com/mascot3daccel/micro3d/v3/   исходники MCv3 + M3G
+tools/jar_patcher.py                гибридный патчер
+tools/mascot3daccel.jar             релизный мост (собирается maintainer'ом)
+build/classes/                      выход javac (dev)
+dist/                               Mascot3DAccel.jar (NetBeans)
 ```
 
-## Status
+### Статус разработки
 
-| Component | State |
-|-----------|--------|
-| MBAC / BMP parsing | Ported from MascotME |
-| M3G bind / release / textures | Done |
-| Matrix & camera mapping | Done |
-| Appearance / material mapping | Done |
-| Figure `VertexBuffer` rendering | In progress |
+| Компонент | Состояние |
+|-----------|-----------|
+| MBAC / BMP parsing | Готово |
+| M3G bind / release / textures | Готово |
+| Матрицы и камера | Готово |
+| Appearance / material | Готово |
+| Figure → VertexBuffer | В работе |
 
-## Screenshots (MascotME software renderer)
+### Конфигурация в игре
+
+`mascotme.ini` в корне JAR — см. [INI-CONFIG.md](INI-CONFIG.md).
+
+---
+
+## Screenshots (MascotME, софтверный рендер)
 
 ![Screenshot of a Coast Racer](/screenshots/CoastRacer.png) ![Screenshot of a Bomberman 3D](/screenshots/Bomberman3D.png) ![Screenshot of a Blades and Magic](/screenshots/BladesAndMagic.png)
 
 ## Special thanks
 
-- [woesss](https://github.com/woesss/) — MascotCapsule v3 implementation in [JL-Mod](https://github.com/woesss/JL-Mod/)
-- [Roman Lahin](https://github.com/) — MascotME
-- [Yury Kharchenko](https://github.com/) — original MCv3 parsing code
-- [klaxons1](https://github.com/klaxons1/), [shinovon](https://github.com/shinovon/), [minexew](https://github.com/minexew/) — testing and [MascotCapsule Archaeology](https://github.com/j2me-preservation/MascotCapsule/)
+- [woesss](https://github.com/woesss/) — [JL-Mod](https://github.com/woesss/JL-Mod/)
+- Roman Lahin — MascotME
+- Yury Kharchenko — MCv3 parsing
+- [klaxons1](https://github.com/klaxons1/), [shinovon](https://github.com/shinovon/), [minexew](https://github.com/minexew/)
 
 ## License
 
-MIT License — see [LICENSE](LICENSE). Fork extensions Copyright (c) 2026 Konstantin Zverev.
+MIT — [LICENSE](LICENSE). Fork extensions Copyright (c) 2026 Konstantin Zverev.
