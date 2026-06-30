@@ -63,20 +63,35 @@ pyinstaller --onefile --name mascot3daccel-patcher tools/jar_patcher.py
 | Компонент | Назначение |
 |-----------|------------|
 | **OpenJDK 8** ([Adoptium Temurin](https://adoptium.net/)) | `javac` для байткода Java 1.3 |
-| **Java ME SDK 3.x** (опционально) | JSR-184 bootclasspath для компиляции M3G |
+| **`lib/jsr184_api.jar`** | API JSR-184 / MIDP для Dev-компиляции (см. ниже) |
 | Python 3 | Запуск `tools/jar_patcher.py` |
+
+### JSR-184 API для Dev-компиляции
+
+Стандартный `javac` не знает пакеты `javax.microedition.m3g` и `javax.microedition.lcdui`. Для Dev-режима нужен JAR с мобильным API:
+
+1. Возьмите **`api.jar`** из папки **KEmulator** (полный J2ME API stub с MIDP и M3G).
+2. Скопируйте его в репозиторий как:
+
+```text
+lib/jsr184_api.jar
+```
+
+Если в `api.jar` нет `javax.microedition.lcdui`, дополнительно положите MIDP-stub как `lib/midp_api.jar`.
+
+Файлы не коммитятся в git (см. `.gitignore`), каждый разработчик кладёт их локально.
+
+Патчер автоматически дополняет `-bootclasspath` JAR-ом `rt.jar` из JDK 8 (иначе `java.lang` не резолвится).
+
+Альтернатива: переменная окружения `MASCOT3DACCEL_BOOTCLASSPATH` с полным списком JAR из Java ME SDK 3.x.
 
 ### Настройка окружения
 
 1. Установите **JDK 8**, проверьте: `javac -version`
 2. Добавьте в `PATH` или задайте `JAVA_HOME`
-3. Для M3G-классов укажите bootclasspath (пример Windows):
+3. Положите `lib/jsr184_api.jar` (см. выше)
 
-```text
-set MASCOT3DACCEL_BOOTCLASSPATH=C:\Java_ME_platform_SDK_3.4\lib\jsr184_1.1.jar;C:\Java_ME_platform_SDK_3.4\lib\midp_2.0.jar;C:\Java_ME_platform_SDK_3.4\lib\cldc_1.1.jar
-```
-
-Альтернатива: сборка через **NetBeans** + JSR-184 platform (`ant jar`).
+Альтернатива без патчера: сборка через **NetBeans** + JSR-184 platform (`ant jar`).
 
 ### Dev-режим патчера
 
@@ -89,7 +104,7 @@ python tools/jar_patcher.py --dev "game.jar" -o game_n95.jar
 Патчер вызывает:
 
 ```text
-javac -source 1.3 -target 1.3 -encoding UTF-8 -d build/classes src/com/mascot3daccel/micro3d/v3/*.java
+javac -source 1.3 -target 1.3 -bootclasspath lib/jsr184_api.jar -d build/classes src/com/mascot3daccel/micro3d/v3/*.java
 ```
 
 Затем вшивает `build/classes` в игру (с той же бинарной заменой `mascotcapsule` → `mascot3daccel`).
@@ -110,6 +125,7 @@ python tools/jar_patcher.py --dev game.jar --classes-dir build/CLDC-1.1-MIDP-2.0
 
 ```
 src/com/mascot3daccel/micro3d/v3/   исходники MCv3 + M3G
+lib/jsr184_api.jar                  JSR-184 API (KEmulator api.jar, локально)
 tools/jar_patcher.py                гибридный патчер
 tools/mascot3daccel.jar             релизный мост (собирается maintainer'ом)
 build/classes/                      выход javac (dev)

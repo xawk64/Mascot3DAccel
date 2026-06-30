@@ -18,6 +18,7 @@ TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(TOOLS_DIR)
 
 BRIDGE_JAR_NAME = "mascot3daccel.jar"
+JSR184_API_JAR = os.path.join(REPO_ROOT, "lib", "jsr184_api.jar")
 SRC_GLOB = os.path.join(REPO_ROOT, "src", "com", "mascot3daccel", "micro3d", "v3", "*.java")
 BUILD_CLASSES = os.path.join(REPO_ROOT, "build", "classes")
 
@@ -94,15 +95,60 @@ def find_javac():
     )
 
 
-def find_bootclasspath():
+def find_jdk_rt(javac):
+    java_home = os.environ.get("JAVA_HOME")
+    if not java_home:
+        java_home = os.path.dirname(os.path.dirname(javac))
+    candidates = [
+        os.path.join(java_home, "jre", "lib", "rt.jar"),
+        os.path.join(java_home, "lib", "rt.jar"),
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def format_bootclasspath_for_log(bootclasspath):
+    parts = []
+    for entry in bootclasspath.split(os.pathsep):
+        try:
+            rel = os.path.relpath(entry, REPO_ROOT)
+            if not rel.startswith(".."):
+                parts.append(rel.replace("\\", "/"))
+                continue
+        except ValueError:
+            pass
+        parts.append(entry)
+    return os.pathsep.join(parts)
+
+
+def find_bootclasspath(javac):
     env = os.environ.get("MASCOT3DACCEL_BOOTCLASSPATH")
     if env and os.path.exists(env.split(os.pathsep)[0]):
         return env
 
-    candidates = []
+    parts = []
+    rt = find_jdk_rt(javac)
+    if rt:
+        parts.append(rt)
+
+    if os.path.isfile(JSR184_API_JAR):
+        parts.append(JSR184_API_JAR)
+
+    midp = os.path.join(REPO_ROOT, "lib", "midp_api.jar")
+    if os.path.isfile(midp):
+        parts.append(midp)
+
+    if parts:
+        return os.pathsep.join(parts)
+
     sdk_home = os.environ.get("JAVA_ME_SDK_HOME")
     if sdk_home:
-        candidates.append(os.path.join(sdk_home, "lib"))
+        lib_dir = os.path.join(sdk_home, "lib")
+        jars = glob.glob(os.path.join(lib_dir, "*.jar"))
+        if jars:
+            return os.pathsep.join(sorted(jars))
 
     patterns = [
         r"C:\Java_ME_platform_SDK_3.4\lib\*.jar",
@@ -123,7 +169,20 @@ def compile_dev_sources():
         raise SystemExit("Dev mode: no sources at %s" % SRC_GLOB)
 
     javac = find_javac()
-    bootclasspath = find_bootclasspath()
+    bootclasspath = find_bootclasspath(javac)
+
+    if not bootclasspath:
+        raise SystemExit(
+            "JSR-184 API not found.\n"
+            "Copy KEmulator api.jar to lib/jsr184_api.jar (see README),\n"
+            "or set MASCOT3DACCEL_BOOTCLASSPATH to your Java ME / M3G API jars."
+        )
+
+    if not os.path.isfile(JSR184_API_JAR):
+        raise SystemExit(
+            "Dev compile requires lib/jsr184_api.jar.\n"
+            "Copy KEmulator api.jar there (see README)."
+        )
 
     if os.path.isdir(BUILD_CLASSES):
         shutil.rmtree(BUILD_CLASSES)
@@ -134,20 +193,19 @@ def compile_dev_sources():
         "-source", "1.3",
         "-target", "1.3",
         "-encoding", "UTF-8",
+        "-bootclasspath", bootclasspath,
         "-d", BUILD_CLASSES,
     ]
-    if bootclasspath:
-        cmd.extend(["-bootclasspath", bootclasspath])
-        log("  bootclasspath: %s" % bootclasspath)
-    else:
-        log("  WARNING: no JSR-184 bootclasspath (set MASCOT3DACCEL_BOOTCLASSPATH)")
     cmd.extend(sources)
 
+    log("  bootclasspath: %s" % format_bootclasspath_for_log(bootclasspath))
     log("  Running: %s" % " ".join(cmd))
     try:
         subprocess.check_call(cmd)
     except subprocess.CalledProcessError:
-        raise SystemExit("javac failed. Check JDK 8 and MASCOT3DACCEL_BOOTCLASSPATH.")
+        raise SystemExit(
+            "javac failed. Ensure lib/jsr184_api.jar contains javax.microedition.m3g and javax.microedition.lcdui."
+        )
     except OSError as e:
         raise SystemExit("Cannot run javac: %s" % e)
 

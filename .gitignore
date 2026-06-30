@@ -6,3 +6,4 @@
 /nbdist/
 /.nb-gradle/
 /private/
+*.jar
